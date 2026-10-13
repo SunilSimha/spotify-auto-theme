@@ -1,0 +1,23 @@
+#!/usr/bin/bash
+# Re-apply the Spotify "force-dark-mode" patch so the Spicetify theme keeps
+# following the GNOME light/dark setting. A Spotify Flatpak update replaces the
+# executable and undoes it. Does nothing if already patched.
+# Works as the normal user or under sudo (e.g. from a system update script).
+
+user_home=$(getent passwd "${SUDO_USER:-$(id -un)}" | cut -d: -f6)
+patcher="$user_home/.config/spicetify/spotify-unforce-dark.py"
+
+if [ ! -f "$patcher" ]; then
+    echo "spotify-unforce-dark: $patcher not found, skipping" >&2
+    exit 0
+fi
+
+echo "Checking Spotify dark-mode patch..."
+if out=$(HOME="$user_home" /usr/bin/python3 "$patcher" apply 2>&1); then
+    echo "$out"
+    if [[ $out == patched* ]] && pgrep -f /app/extra/share/spotify/spotify > /dev/null; then
+        echo "Restart Spotify for the patch to take effect."
+    fi
+else
+    echo "spotify-unforce-dark: patch not applied: $out" >&2
+fi
