@@ -27,13 +27,14 @@ Chromium. The catch is that Spotify starts that Chromium with the switch
 desktop says. Nothing running inside Spotify (a CSS snippet or a Spicetify
 extension) can see the real setting while that switch is active.
 
-So the fix has two parts, a patch for the executable and a CSS snippet, in three files:
+So the fix has two parts, a patch for the executable and a CSS snippet:
 
 | File | What it does |
 | --- | --- |
 | `spotify-unforce-dark.py` | Renames `force-dark-mode` inside the `spotify` executable to `force-dark-m0de`, a name Chromium ignores. Chromium then reads the system setting from the desktop portal. |
 | `spotify-unforce-dark` | Small bash wrapper that re-applies the patch if needed. Meant to be run after Spotify updates. |
 | `catppuccin-auto-scheme.css` | A Spicetify Marketplace snippet that sets the Catppuccin `latte` palette under `prefers-color-scheme: light` and `mocha` under `dark`. |
+| `make-snippet.py` | Generates a snippet like the one above for any other pair of colour schemes. Only needed if you want something other than `latte`/`mocha`. |
 
 ## Prerequisites
 
@@ -87,6 +88,44 @@ So the fix has two parts, a patch for the executable and a CSS snippet, in three
 
 5. Toggle your system between light and dark. Spotify should recolour immediately.
 
+## Using other flavours or another theme
+
+`catppuccin-auto-scheme.css` is `latte` for light and `mocha` for dark. For any
+other pair, generate your own snippet with `make-snippet.py` and paste that into
+Marketplace instead (step 4 above). It needs only Python 3.
+
+```bash
+python3 make-snippet.py LIGHT DARK [-o OUT.css] [--ini PATH_OR_URL]
+```
+
+- `LIGHT` and `DARK` are the scheme names to use in system light and dark mode.
+- `-o` writes to a file. Without it the CSS goes to standard output.
+- `--ini` is the `color.ini` to read, as a file path or URL. By default it downloads
+  the one from the Catppuccin Spicetify theme.
+- `--list` prints the scheme names available in the ini.
+
+Examples:
+
+```bash
+# See which Catppuccin flavours exist: frappe, latte, macchiato, mocha
+python3 make-snippet.py --list
+
+# Light = latte, dark = frappe, copied straight to the clipboard
+python3 make-snippet.py latte frappe | wl-copy
+
+# Light = latte, dark = macchiato, saved to a file
+python3 make-snippet.py latte macchiato -o my-snippet.css
+
+# A different theme, from its local color.ini (scheme names are case-sensitive)
+python3 make-snippet.py --list --ini ~/.config/spicetify/Themes/MyTheme/color.ini
+python3 make-snippet.py Light Dark --ini ~/.config/spicetify/Themes/MyTheme/color.ini -o my-snippet.css
+```
+
+Use only one such snippet at a time: if two are enabled, the one Marketplace loads
+last wins. The Catppuccin flavour pairs produce the same kind of CSS as the tested
+`latte`/`mocha` snippet; other themes have not been tried, and a theme that changes
+more than its `--spice-*` colours between schemes will only be partly switched.
+
 ## After a Spotify update
 
 A Spotify update replaces the executable, so Spotify goes back to always-dark. Run
@@ -132,10 +171,10 @@ Marketplace. `spotify-unforce-dark.py status` shows the current state.
 This is a small fix for one setup, and you are very welcome to fork it and adapt it
 to yours. Some starting points, none of them tested here:
 
-- **Other Catppuccin flavours, or another theme.** Edit the two blocks in
-  `catppuccin-auto-scheme.css`. Any Spicetify theme that reads the `--spice-*`
-  variables can be driven the same way: take the values from the theme's
-  `color.ini` and set both `--spice-<name>` (hex) and `--spice-rgb-<name>` (r,g,b).
+- **Another theme.** Any Spicetify theme that reads the `--spice-*` variables can be
+  driven the same way. Point `make-snippet.py --ini` at the theme's `color.ini`
+  (see above), or write the two blocks by hand: each colour needs both
+  `--spice-<name>` (hex) and `--spice-rgb-<name>` (r,g,b).
 - **Themes installed with the Spicetify CLI instead of Marketplace.** The same CSS
   could go at the end of the theme's `user.css`.
 - **Spotify from a `.deb`, `.rpm`, Snap or the AUR.** The patcher takes the Spotify
@@ -149,3 +188,9 @@ to yours. Some starting points, none of them tested here:
 
 If you get it working somewhere else, a pull request or an issue describing what you
 changed would help the next person.
+
+## License
+
+[MIT](LICENSE). The colour values in `catppuccin-auto-scheme.css` come from the
+[Catppuccin Spicetify theme](https://github.com/catppuccin/spicetify), which is also
+MIT licensed.
